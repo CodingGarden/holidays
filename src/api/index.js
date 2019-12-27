@@ -7,10 +7,13 @@ const {
   GOOGLE_API_KEY: apiKey
 } = process.env;
 
+let byMonth;
+
 async function getHolidays(country = 'en.usa') {
   const API_URL = `https://www.googleapis.com/calendar/v3/calendars/${country}%23holiday%40group.v.calendar.google.com/events?key=${apiKey}`;
   const { data } = await axios.get(API_URL);
-  const byMonth = data.items.reduce((byMonth, item) => {
+  byMonth = {};
+  data.items.forEach((item) => {
     const [year, month, day] = item.start.date.split('-');
     const holiday = {
       name: item.summary,
@@ -22,15 +25,16 @@ async function getHolidays(country = 'en.usa') {
     byMonth[+year][+month] = byMonth[+year][+month] || {};
     byMonth[+year][+month][+day] = byMonth[+year][+month][+day] || [];
     byMonth[+year][+month][+day].push(holiday);
-    return byMonth;
-  }, {});
+  });
   return byMonth;
 }
 
 router.get('/', async (req, res, next) => {
   try {
-    const holidays = await getHolidays();
-    res.json(holidays);
+    if (!byMonth) {
+      await getHolidays();
+    }
+    res.json(byMonth);
   } catch (error) {
     next(error);
   }
